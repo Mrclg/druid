@@ -17,12 +17,14 @@ package com.alibaba.druid.sql.dialect.hive.visitor;
 
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLName;
+import com.alibaba.druid.sql.ast.statement.SQLAlterTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLAssignItem;
 import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveInsert;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveInsertStatement;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveMultiInsertStatement;
+import com.alibaba.druid.sql.dialect.hive.stmt.HiveAlterTableChangeColumn;
 import com.alibaba.druid.sql.dialect.hive.stmt.HiveCreateTableStatement;
 import com.alibaba.druid.sql.visitor.SchemaStatVisitor;
 import com.alibaba.druid.stat.TableStat;
@@ -68,6 +70,24 @@ public class HiveSchemaStatVisitor extends SchemaStatVisitor implements HiveASTV
 
     @Override
     public void endVisit(HiveInsert x) {
+
+    }
+
+    @Override
+    public boolean visit(HiveAlterTableChangeColumn x) {
+        SQLAlterTableStatement stmt = (SQLAlterTableStatement) x.getParent();
+
+        SQLName table = stmt.getName();
+        String tableName = table.toString();
+
+        SQLName column = x.getColumnName();
+        String columnName = column.toString();
+        addColumn(tableName, columnName);
+        return false;
+    }
+
+    @Override
+    public void endVisit(HiveAlterTableChangeColumn x) {
 
     }
 

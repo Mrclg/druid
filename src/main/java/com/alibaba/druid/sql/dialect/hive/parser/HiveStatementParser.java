@@ -15,24 +15,17 @@
  */
 package com.alibaba.druid.sql.dialect.hive.parser;
 
-import java.util.List;
-
 import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.ast.expr.SQLQueryExpr;
-import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
-import com.alibaba.druid.sql.ast.statement.SQLReplaceStatement;
-import com.alibaba.druid.sql.ast.statement.SQLSelect;
-import com.alibaba.druid.sql.ast.statement.SQLSubqueryTableSource;
+import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveInsert;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveMultiInsertStatement;
-import com.alibaba.druid.sql.parser.Lexer;
-import com.alibaba.druid.sql.parser.SQLCreateTableParser;
-import com.alibaba.druid.sql.parser.SQLParserFeature;
-import com.alibaba.druid.sql.parser.SQLSelectParser;
-import com.alibaba.druid.sql.parser.SQLStatementParser;
-import com.alibaba.druid.sql.parser.Token;
+import com.alibaba.druid.sql.dialect.hive.stmt.HiveAlterTableChangeColumn;
+import com.alibaba.druid.sql.parser.*;
 import com.alibaba.druid.util.JdbcConstants;
+
+import java.util.List;
 
 public class HiveStatementParser extends SQLStatementParser {
     public HiveStatementParser(String sql) {
@@ -143,4 +136,100 @@ public class HiveStatementParser extends SQLStatementParser {
 
         return false;
     }
+
+    public SQLStatement parseAlter() {
+        this.accept(Token.ALTER);
+
+        if (lexer.token() == Token.TABLE) {
+            lexer.nextToken();
+
+            SQLAlterTableStatement stmt = new SQLAlterTableStatement(JdbcConstants.HIVE);
+            stmt.setName(this.exprParser.name());
+
+            for (; ; ) {
+                if (lexer.token() == Token.DROP) {
+
+                }else if (lexer.identifierEquals("ADD")) {
+                    lexer.nextToken();
+
+                    if (lexer.token() == Token.IDENTIFIER) {
+                        SQLAlterTableAddColumn item = parseAlterTableAddColumn();
+                        stmt.addItem(item);
+
+                    }else if(lexer.token() == Token.COLUMN){
+                        SQLAlterTableAddColumn item = parseAlterTableAddColumn();
+                        stmt.addItem(item);
+                    }
+
+                }else if(lexer.token() == Token.REPLACE){
+
+                }else if(lexer.identifierEquals("CHANGE")){
+                    lexer.nextToken();
+
+                    if (lexer.token() == Token.IDENTIFIER) {
+                        HiveAlterTableChangeColumn item = parseAlterTableChangeColumn();
+                        stmt.addItem(item);
+
+                    }else if(lexer.token() == Token.COLUMN){
+                        HiveAlterTableChangeColumn item = parseAlterTableChangeColumn();
+                        stmt.addItem(item);
+                    }
+
+                }else{
+                    break;
+                }
+            }
+
+            return stmt;
+        }
+        throw new ParserException("TODO " + lexer.info());
+    }
+
+    protected HiveAlterTableChangeColumn parseAlterTableChangeColumn(){
+        if(lexer.token() == Token.COLUMN){
+            lexer.nextToken();
+        }
+
+        HiveAlterTableChangeColumn item = new HiveAlterTableChangeColumn();
+        item.setColumnName(this.exprParser.name());
+        item.setNewColumnDefinition(this.exprParser.parseColumn());
+
+        if (lexer.identifierEquals("AFTER")) {
+            lexer.nextToken();
+            item.setAfterColumn(this.exprParser.name());
+        } else if (lexer.identifierEquals("FIRST")) {
+            lexer.nextToken();
+            if (lexer.token() == Token.IDENTIFIER) {
+                item.setFirstColumn(this.exprParser.name());
+            } else {
+                item.setFirst(true);
+            }
+        }
+        return item;
+    }
+
+    protected SQLAlterTableAddColumn parseAlterTableAddColumn() {
+        acceptIdentifier("COLUMNS");
+        accept(Token.LPAREN);
+
+        SQLAlterTableAddColumn item = new SQLAlterTableAddColumn();
+
+        for (;;) {
+            SQLColumnDefinition columnDef = this.exprParser.parseColumn();
+            item.addColumn(columnDef);
+            if (lexer.token() == Token.COMMA) {
+                lexer.nextToken();
+                if (lexer.identifierEquals("ADD")) {
+                    break;
+                }
+                continue;
+            }
+            break;
+        }
+
+        accept(Token.RPAREN);
+
+        return item;
+    }
+
 }

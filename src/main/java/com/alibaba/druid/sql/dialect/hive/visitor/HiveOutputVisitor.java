@@ -34,6 +34,7 @@ import com.alibaba.druid.sql.ast.statement.SQLTableSource;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveInsert;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveInsertStatement;
 import com.alibaba.druid.sql.dialect.hive.ast.HiveMultiInsertStatement;
+import com.alibaba.druid.sql.dialect.hive.stmt.HiveAlterTableChangeColumn;
 import com.alibaba.druid.sql.dialect.hive.stmt.HiveCreateTableStatement;
 import com.alibaba.druid.sql.visitor.SQLASTOutputVisitor;
 
@@ -334,6 +335,30 @@ public class HiveOutputVisitor extends SQLASTOutputVisitor implements HiveASTVis
 
     @Override
     public void endVisit(HiveInsert x) {
+
+    }
+
+    @Override
+    public boolean visit(HiveAlterTableChangeColumn x) {
+        print0(ucase ? "CHANGE COLUMN " : "change column ");
+        x.getColumnName().accept(this);
+        print(' ');
+        x.getNewColumnDefinition().accept(this);
+        if (x.getFirstColumn() != null) {
+            print0(ucase ? " FIRST " : " first ");
+            x.getFirstColumn().accept(this);
+        } else if (x.getAfterColumn() != null) {
+            print0(ucase ? " AFTER " : " after ");
+            x.getAfterColumn().accept(this);
+        } else if (x.isFirst()) {
+            print0(ucase ? " FIRST" : " first");
+        }
+
+        return false;
+    }
+
+    @Override
+    public void endVisit(HiveAlterTableChangeColumn x) {
 
     }
 }
